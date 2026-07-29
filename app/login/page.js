@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [userInput, setUserInput] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -22,8 +22,15 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
 
+    let emailFinal = userInput.trim();
+
+    // Si el texto ingresado no contiene "@", le agregamos automáticamente el dominio institucional
+    if (!emailFinal.includes("@")) {
+      emailFinal = `${emailFinal}@neurologia.local`;
+    }
+
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: emailFinal,
       password,
     });
 
@@ -35,11 +42,13 @@ export default function LoginPage() {
 
     const user = authData.user;
 
-    if (email === "admin@admin.com" || user.user_metadata?.role === "admin") {
+    // Si el correo es el de admin (o puedes validarlo por metadata/tabla de roles en supabase)
+    if (emailFinal === "admin@neurologia.local" || user.user_metadata?.role === "admin") {
       router.replace("/admin");
       return;
     }
 
+    // Si es un paciente, verificar si ya respondió la encuesta
     const { data: respuestaExistente, error: respError } = await supabase
       .from("respuestas")
       .select("id")
@@ -65,7 +74,7 @@ export default function LoginPage() {
             🔒
           </div>
           <h1 className="text-xl font-bold text-slate-900">Acceso a la Plataforma</h1>
-          <p className="text-xs text-slate-500 mt-1">Ingresa tus credenciales institucionales</p>
+          <p className="text-xs text-slate-500 mt-1">Ingresa tu usuario institucional</p>
         </div>
 
         {errorMsg && (
@@ -76,14 +85,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Correo Electrónico</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Usuario / Cédula</label>
             <input
-              type="email"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
               className="w-full border border-slate-300 p-3 rounded-xl text-sm bg-white text-slate-900 font-medium outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
-              placeholder="correo@ejemplo.com"
+              placeholder="Ej: admin, juan o 12345"
             />
           </div>
 
