@@ -20,14 +20,12 @@ export default function LoginPage() {
       ? usuarioLimpio
       : `${usuarioLimpio}@neurologia.local`;
 
-    // 1. Iniciar sesión en Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: emailFormateado,
       password: password,
     });
 
     if (authError) {
-      console.error("Error original de Supabase:", authError.message);
       setCargando(false);
       setError(`Error al ingresar: ${authError.message === "Invalid login credentials" ? "Usuario o clave incorrectos." : authError.message}`);
       return;
@@ -39,22 +37,32 @@ export default function LoginPage() {
       return;
     }
 
-    // 2. Verificar el rol del usuario en la tabla perfiles
+    // Verificar el rol del usuario en la tabla perfiles
     const { data: perfil } = await supabase
       .from("perfiles")
       .select("rol")
       .eq("id", authData.user.id)
       .maybeSingle();
 
-    // Si es admin, entra directo a admin
     if (perfil?.rol === "admin") {
       setCargando(false);
       router.push("/admin");
       return;
     }
 
-    // 3. Otorgar pase temporal de autorización y redirigir al cuestionario
-    sessionStorage.setItem("auth_autorizado", "true");
+    // Verificar si el paciente ya respondió la encuesta previamente
+    const { data: respuestaExistente } = await supabase
+      .from("respuestas")
+      .select("id")
+      .eq("user_id", authData.user.id)
+      .maybeSingle();
+
+    if (respuestaExistente) {
+      setCargando(false);
+      router.replace("/ya-respondido");
+      return;
+    }
+
     setCargando(false);
     router.push("/cuestionario");
   };
@@ -82,7 +90,6 @@ export default function LoginPage() {
               required
               value={usuario}
               onChange={(e) => setUsuario(e.target.value)}
-              placeholder=""
               className="w-full border border-slate-200 p-3 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-sky-500 bg-slate-50"
             />
           </div>
@@ -96,7 +103,6 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder=""
               className="w-full border border-slate-200 p-3 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-sky-500 bg-slate-50"
             />
           </div>
