@@ -1,121 +1,124 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [userInput, setUserInput] = useState("");
+  const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-
-  useEffect(() => {
-    const limpiarSesionPrevia = async () => {
-      await supabase.auth.signOut();
-    };
-    limpiarSesionPrevia();
-  }, []);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+  const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
+    setCargando(true);
+    setError(null);
 
-    let emailFinal = userInput.trim();
+    const usuarioLimpio = usuario.trim().toLowerCase();
+    const emailFormateado = usuarioLimpio.includes("@")
+      ? usuarioLimpio
+      : `${usuarioLimpio}@neurologia.local`;
 
-    // Si el texto ingresado no contiene "@", le agregamos automáticamente el dominio institucional
-    if (!emailFinal.includes("@")) {
-      emailFinal = `${emailFinal}@neurologia.local`;
-    }
-
+    // 1. Iniciar sesión en Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailFinal,
-      password,
+      email: emailFormateado,
+      password: password,
     });
 
     if (authError) {
-      setErrorMsg(authError.message);
-      setLoading(false);
+      console.error("Error original de Supabase:", authError.message);
+      setCargando(false);
+      setError(`Error al ingresar: ${authError.message === "Invalid login credentials" ? "Usuario o clave incorrectos." : authError.message}`);
       return;
     }
 
-    const user = authData.user;
-
-    // Si el correo es el de admin (o puedes validarlo por metadata/tabla de roles en supabase)
-    if (emailFinal === "admin@neurologia.local" || user.user_metadata?.role === "admin") {
-      router.replace("/admin");
+    if (!authData.user) {
+      setCargando(false);
+      setError("No se pudo obtener la información del usuario.");
       return;
     }
 
-    // Si es un paciente, verificar si ya respondió la encuesta
-    const { data: respuestaExistente, error: respError } = await supabase
-      .from("respuestas")
-      .select("id")
-      .eq("user_id", user.id)
+    // 2. Verificar el rol del usuario en la tabla perfiles
+    const { data: perfil } = await supabase
+      .from("perfiles")
+      .select("rol")
+      .eq("id", authData.user.id)
       .maybeSingle();
 
-    if (respError) {
-      console.error("Error al verificar respuestas:", respError.message);
+    // Si es admin, entra directo a admin
+    if (perfil?.rol === "admin") {
+      setCargando(false);
+      router.push("/admin");
+      return;
     }
 
-    if (respuestaExistente) {
-      router.replace("/ya-respondido");
-    } else {
-      router.replace("/cuestionario");
-    }
+    // 3. Otorgar pase temporal de autorización y redirigir al cuestionario
+    sessionStorage.setItem("auth_autorizado", "true");
+    setCargando(false);
+    router.push("/cuestionario");
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8">
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-sky-600 rounded-2xl flex items-center justify-center text-white text-xl mx-auto mb-3 shadow-md shadow-sky-600/20 font-bold">
-            🔒
+      <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-sky-600 rounded-xl flex items-center justify-center text-white text-2xl mx-auto mb-3 font-bold">
+            🧠
           </div>
-          <h1 className="text-xl font-bold text-slate-900">Acceso a la Plataforma</h1>
-          <p className="text-xs text-slate-500 mt-1">Ingresa tu usuario institucional</p>
+          <h1 className="text-xl font-bold text-slate-800">Acceso a Evaluación</h1>
+          <p className="text-xs text-sky-600 font-semibold tracking-wide uppercase mt-1">
+            Centro de Neurología Especializada
+          </p>
         </div>
 
-        {errorMsg && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl font-medium">
-            {errorMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Usuario / Cédula</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Usuario / Código de Paciente
+            </label>
             <input
               type="text"
               required
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              className="w-full border border-slate-300 p-3 rounded-xl text-sm bg-white text-slate-900 font-medium outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
-              placeholder="Ej: admin, juan o 12345"
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              placeholder=""
+              className="w-full border border-slate-200 p-3 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-sky-500 bg-slate-50"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contraseña</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Clave de Acceso
+            </label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-slate-300 p-3 rounded-xl text-sm bg-white text-slate-900 font-medium outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
-              placeholder="••••••••"
+              placeholder=""
+              className="w-full border border-slate-200 p-3 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-sky-500 bg-slate-50"
             />
           </div>
 
+          {error && (
+            <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg leading-relaxed">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-lg shadow-sky-600/20 disabled:opacity-50"
+            disabled={cargando}
+            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-md disabled:opacity-50"
           >
-            {loading ? "Verificando acceso..." : "Iniciar Sesión"}
+            {cargando ? "Validando..." : "Ingresar"}
           </button>
         </form>
+
+        <div className="mt-8 text-center border-t border-slate-100 pt-4 text-xs text-slate-400">
+          Ingrese las credenciales suministradas por el especialista
+        </div>
       </div>
     </div>
   );
