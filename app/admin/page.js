@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { SECCIONES } from "@/lib/preguntas";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -118,39 +119,61 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Modal de Detalle */}
+      {/* Modal de Detalle Organizado por Secciones */}
       {seleccionada && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white max-w-2xl w-full rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[85vh] flex flex-col">
+          <div className="bg-white max-w-3xl w-full rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[85vh] flex flex-col">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800">
-                Detalle de Evaluación: {seleccionada.data?.nombre}
-              </h3>
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">
+                  Evaluación de: {seleccionada.data?.nombre || "Paciente"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Identificación: {seleccionada.data?.documento || "N/A"}
+                </p>
+              </div>
               <button
                 onClick={() => setSeleccionada(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg p-2"
               >
                 ✕
               </button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
-              {Object.entries(seleccionada.data || {}).map(([key, value]) => (
-                <div key={key} className="border-b border-slate-100 pb-2">
-                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    {key.replace(/_/g, " ")}
-                  </span>
-                  <span className="text-sm font-medium text-slate-800 mt-0.5 block">
-                    {value || "No especificado"}
-                  </span>
+
+            {/* Contenido agrupado por SECCIONES */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50">
+              {SECCIONES.map((sec) => (
+                <div key={sec.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <h4 className="text-xs font-bold text-sky-600 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">
+                    {sec.titulo}
+                  </h4>
+                  <div className="space-y-4">
+                    {sec.preguntas.map((preg) => {
+                      const respuestaPaciente = seleccionada.data?.[preg.id];
+                      return (
+                        <div key={preg.id} className="grid grid-cols-1 md:grid-cols-2 gap-1 text-sm">
+                          <span className="text-slate-500 font-medium">
+                            {preg.label}:
+                          </span>
+                          <span className="font-semibold text-slate-800 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            {respuestaPaciente !== undefined && respuestaPaciente !== "" 
+                              ? respuestaPaciente 
+                              : "No respondido / Opcional"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="p-4 border-t border-slate-100 bg-slate-50 text-right">
+
+            <div className="p-4 border-t border-slate-100 bg-white text-right">
               <button
                 onClick={() => setSeleccionada(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-xs"
+                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-xs transition-colors shadow-md"
               >
-                Cerrar
+                Cerrar Detalle
               </button>
             </div>
           </div>
