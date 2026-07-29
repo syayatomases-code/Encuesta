@@ -15,7 +15,7 @@ export default function EncuestaForm({ user }) {
     edad: "",
     identificacion: "",
     ocupacion: "",
-    traumatismo_ craneo: "No",
+    traumatismo_craneo: "No",
     antecedentes_familiares: "Ninguno",
     medicamentos_actuales: "Ninguno",
     sustancias: "Ninguno",
