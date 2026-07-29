@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -11,75 +10,65 @@ export default function CuestionarioPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Advertencia nativa al intentar cerrar o recargar
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    let inactivityTimer;
 
-    const verificarSeguridadYDuplicados = async () => {
-      // 2. Control de F5 con localStorage
-      const recargadoAntes = localStorage.getItem("cuestionario_en_curso");
-
-      if (recargadoAntes) {
-        localStorage.removeItem("cuestionario_en_curso");
-        await supabase.auth.signOut();
-        setLoading(false);
+    const verificarSesion = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
         router.replace("/login");
         return;
       }
 
-      // 3. Validar sesión activa en Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        localStorage.removeItem("cuestionario_en_curso");
-        setLoading(false);
-        router.replace("/login");
-        return;
-      }
-
-      // 4. VERIFICAR SI EL USUARIO YA RESPONDIó ANTERIORMENTE
-      const { data: respuestasExistentes, error: queryError } = await supabase
+      // Validar si ya respondió anteriormente por seguridad
+      const { data: respuestaExistente } = await supabase
         .from("respuestas")
         .select("id")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      if (queryError) {
-        console.error("Error al verificar duplicados:", queryError);
-      }
-
-      if (respuestasExistentes) {
-        // Si ya tiene un registro, limpiar sesión y mandarlo a la página de aviso
-        localStorage.removeItem("cuestionario_en_curso");
-        await supabase.auth.signOut();
-        setLoading(false);
+      if (respuestaExistente) {
         router.replace("/ya-respondido");
         return;
       }
 
-      // 5. Si pasa todas las validaciones, permitimos el acceso
-      localStorage.setItem("cuestionario_en_curso", "true");
       setUser(session.user);
       setLoading(false);
     };
 
-    verificarSeguridadYDuplicados();
+    verificarSesion();
+
+    // Lógica de inactividad (Ej: 15 minutos de inactividad cierra sesión y expulsa al login)
+    const reiniciarTimerInactividad = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(async () => {
+        await supabase.auth.signOut();
+        router.replace("/login");
+      }, 15 * 60 * 1000); // 15 minutos
+    };
+
+    const eventos = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+    eventos.forEach((evento) => {
+      window.addEventListener(evento, reiniciarTimerInactividad);
+    });
+
+    reiniciarTimerInactividad();
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      clearTimeout(inactivityTimer);
+      eventos.forEach((evento) => {
+        window.removeEventListener(evento, reiniciarTimerInactividad);
+      });
     };
   }, [router]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-slate-500 font-semibold">Verificando estado del usuario...</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-500 text-sm font-medium">Cargando sesión segura...</p>
       </div>
     );
   }
 
-  return user ? <EncuestaForm user={user} /> : null;
+  return <EncuestaForm user={user} />;
 }
