@@ -1,124 +1,118 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { seccionesPreguntas } from "@/lib/preguntas";
 
-export default function LoginPage() {
-  const [usuario, setUsuario] = useState("");
-  const [password, setPassword] = useState("");
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState(null);
-  const router = useRouter();
+export default function AdminPage() {
+  const [respuestas, setRespuestas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [seleccionado, setSeleccionado] = useState(null);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setCargando(true);
-    setError(null);
+  useEffect(() => {
+    fetchRespuestas();
+  }, []);
 
-    const usuarioLimpio = usuario.trim().toLowerCase();
-    const emailFormateado = usuarioLimpio.includes("@")
-      ? usuarioLimpio
-      : `${usuarioLimpio}@neurologia.local`;
+  const fetchRespuestas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("respuestas")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    // 1. Iniciar sesión en Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailFormateado,
-      password: password,
-    });
-
-    if (authError) {
-      console.error("Error original de Supabase:", authError.message);
-      setCargando(false);
-      setError(`Error al ingresar: ${authError.message === "Invalid login credentials" ? "Usuario o clave incorrectos. Verifique en Supabase que el email sea " + emailFormateado : authError.message}`);
-      return;
+      if (error) throw error;
+      setRespuestas(data || []);
+    } catch (error) {
+      console.error("Error al cargar respuestas:", error.message);
+    } finally {
+      setLoading(false);
     }
-
-    if (!authData.user) {
-      setCargando(false);
-      setError("No se pudo obtener la información del usuario.");
-      return;
-    }
-
-    // 2. Verificar el rol del usuario en la tabla perfiles
-    const { data: perfil } = await supabase
-      .from("perfiles")
-      .select("rol")
-      .eq("id", authData.user.id)
-      .maybeSingle();
-
-    // Si es admin, entra directo a admin
-    if (perfil?.rol === "admin") {
-      setCargando(false);
-      router.push("/admin");
-      return;
-    }
-
-    // 3. Otorgar pase temporal de autorización y redirigir al cuestionario
-    sessionStorage.setItem("auth_autorizado", "true");
-    setCargando(false);
-    router.push("/cuestionario");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-sky-600 rounded-xl flex items-center justify-center text-white text-2xl mx-auto mb-3 font-bold">
-            🧠
-          </div>
-          <h1 className="text-xl font-bold text-slate-800">Acceso a Evaluación</h1>
-          <p className="text-xs text-sky-600 font-semibold tracking-wide uppercase mt-1">
-            Centro de Neurología Especializada
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-100 p-6 sm:p-10">
+      <div className="max-w-6xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Panel de Administración - Evaluaciones Neurológicas</h1>
+          <p className="text-xs text-slate-500 mt-1">Gestión de expedientes clínicos recibidos</p>
+        </header>
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Usuario / Código de Paciente
-            </label>
-            <input
-              type="text"
-              required
-              value={usuario}
-              onChange={(e) => setUsuario(e.target.value)}
-              placeholder="Ingrese su usuario..."
-              className="w-full border border-slate-200 p-3 rounded-lg text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-sky-500 bg-slate-50"
-            />
+        {loading ? (
+          <p className="text-slate-600 text-sm">Cargando expedientes...</p>
+        ) : respuestas.length === 0 ? (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center">
+            <p className="text-slate-500 text-sm">No hay evaluaciones registradas todavía.</p>
           </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Clave de Acceso
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full border border-slate-200 p-3 rounded-lg text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-sky-500 bg-slate-50"
-            />
-          </div>
-
-          {error && (
-            <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg leading-relaxed">
-              {error}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Lista de Pacientes */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3 overflow-y-auto max-h-[75vh]">
+              <h2 className="text-xs font-bold uppercase text-slate-400 tracking-wider px-2">Pacientes Evaluados ({respuestas.length})</h2>
+              {respuestas.map((item) => {
+                const nombrePaciente = item.data?.nombre || "Sin nombre";
+                const fecha = new Date(item.created_at).toLocaleDateString();
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setSeleccionado(item)}
+                    className={`p-3 rounded-xl cursor-pointer transition-all border ${
+                      seleccionado?.id === item.id
+                        ? "bg-sky-50 border-sky-300 shadow-sm"
+                        : "bg-slate-50/50 border-slate-100 hover:bg-slate-100"
+                    }`}
+                  >
+                    <p className="text-sm font-bold text-slate-800">{nombrePaciente}</p>
+                    <div className="flex justify-between items-center mt-1 text-xs text-slate-500">
+                      <span>ID: {item.data?.identificacion || "N/A"}</span>
+                      <span>{fecha}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-md disabled:opacity-50"
-          >
-            {cargando ? "Validando..." : "Ingresar"}
-          </button>
-        </form>
+            {/* Detalle del Expediente Seleccionado */}
+            <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 overflow-y-auto max-h-[75vh]">
+              {seleccionado ? (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-100 pb-4 flex justify-between items-start">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">{seleccionado.data?.nombre}</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Documento: <strong className="text-slate-700">{seleccionado.data?.identificacion}</strong> | Edad: <strong className="text-slate-700">{seleccionado.data?.edad} años</strong>
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-full">Completado</span>
+                  </div>
 
-        <div className="mt-8 text-center border-t border-slate-100 pt-4 text-xs text-slate-400">
-          Ingrese las credenciales suministradas por el especialista
-        </div>
+                  {/* Iterar sobre las secciones y sus campos usando lib/preguntas.js */}
+                  {Object.entries(seccionesPreguntas).map(([secKey, seccion]) => (
+                    <div key={secKey} className="space-y-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-sky-700 bg-sky-50 p-2 rounded-lg">
+                        {seccion.titulo}
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        {Object.keys(seccion.campos).map((campoKey) => {
+                          const valor = seleccionado.data?.[campoKey];
+                          if (valor === undefined || valor === "") return null;
+                          return (
+                            <div key={campoKey} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <span className="block text-[10px] font-bold text-slate-400 uppercase">{seccion.campos[campoKey].label}</span>
+                              <span className="text-slate-800 font-medium text-xs mt-0.5 block">{valor}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-center p-12">
+                  <p className="text-slate-400 text-sm">Selecciona un paciente de la lista para ver su expediente clínico detallado.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

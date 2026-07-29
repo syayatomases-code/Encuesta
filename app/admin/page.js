@@ -29,6 +29,11 @@ export default function AdminPage() {
     obtenerRespuestas();
   }, []);
 
+  const handleCerrarSesion = () => {
+    // Si manejas sesión de Supabase auth puedes agregar supabase.auth.signOut() aquí
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
@@ -40,10 +45,10 @@ export default function AdminPage() {
             <p className="text-xs text-slate-500 mt-1">Expedientes y evaluaciones neurológicas registradas</p>
           </div>
           <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors"
+            onClick={handleCerrarSesion}
+            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-xs transition-colors"
           >
-            ← Volver al inicio
+            Cerrar sesión
           </button>
         </div>
 
@@ -110,7 +115,6 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Listado dinámico automático de todas las preguntas guardadas */}
             <div className="space-y-3">
               {respuestaSeleccionada.data && Object.keys(respuestaSeleccionada.data).length > 0 ? (
                 Object.entries(respuestaSeleccionada.data).map(([key, value]) => (
