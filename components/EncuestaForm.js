@@ -68,8 +68,8 @@ export default function EncuestaForm({ user }) {
     }
   };
 
-  // Cálculo del porcentaje de progreso
-  const porcentajeProgreso = Math.round((paso / 3) * 100);
+  // Cálculo de progreso corregido: Sección 1 = 0%, Sección 2 = 50%, Sección 3 = 100%
+  const porcentajeProgreso = paso === 1 ? 0 : paso === 2 ? 50 : 100;
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6">
