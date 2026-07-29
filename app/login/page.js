@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -9,6 +9,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    const limpiarSesionPrevia = async () => {
+      await supabase.auth.signOut();
+    };
+    limpiarSesionPrevia();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,13 +35,11 @@ export default function LoginPage() {
 
     const user = authData.user;
 
-    // 1. Verificar si es Administrador (puedes ajustar el correo o usar una tabla de roles)
     if (email === "admin@admin.com" || user.user_metadata?.role === "admin") {
       router.replace("/admin");
       return;
     }
 
-    // 2. Si es paciente, verificar si ya respondió la encuesta en la tabla "respuestas"
     const { data: respuestaExistente, error: respError } = await supabase
       .from("respuestas")
       .select("id")
@@ -77,7 +82,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-slate-200 p-3 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full border border-slate-300 p-3 rounded-xl text-sm bg-white text-slate-900 font-medium outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
               placeholder="correo@ejemplo.com"
             />
           </div>
@@ -89,7 +94,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-slate-200 p-3 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full border border-slate-300 p-3 rounded-xl text-sm bg-white text-slate-900 font-medium outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
               placeholder="••••••••"
             />
           </div>

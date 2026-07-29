@@ -15,8 +15,8 @@ export default function EncuestaForm({ user }) {
     Object.values(seccionesPreguntas).forEach((seccion) => {
       Object.keys(seccion.campos).forEach((campo) => {
         initialData[campo] = campo === "edad" || campo === "intensidad_dolor" ? "" : 
-                             campo === "frecuencia_fatiga" ? "3" : 
-                             campo === "observaciones" ? "" : "No"; 
+                            campo === "frecuencia_fatiga" ? "3" : 
+                            campo === "observaciones" ? "" : "No"; 
       });
     });
     // Ajustes específicos por defecto que tenías
@@ -140,21 +140,21 @@ export default function EncuestaForm({ user }) {
                       value={formData[key]}
                       onChange={handleChange}
                       placeholder={config.placeholder || ""}
-                      className="w-full border border-slate-200 p-3 rounded-xl text-sm text-slate-800 bg-slate-50/50 outline-none focus:ring-2 focus:ring-sky-500"
+                      className="w-full border border-slate-300 p-3 rounded-xl text-sm font-medium text-slate-900 bg-white outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400"
                     />
                   ) : config.tipo === "select" ? (
                     <select
                       name={key}
                       value={formData[key]}
                       onChange={handleChange}
-                      className="w-full border border-slate-200 p-3 rounded-xl text-sm bg-slate-50/50 outline-none focus:ring-2 focus:ring-sky-500"
+                      className="w-full border border-slate-300 p-3 rounded-xl text-sm font-medium text-slate-900 bg-white outline-none focus:ring-2 focus:ring-sky-500"
                     >
                       {config.opciones.map((op) => (
                         <option key={op} value={op}>{op}</option>
                       ))}
                     </select>
                   ) : config.tipo === "range" ? (
-                    <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-300">
                       <input
                         type="range"
                         name={key}
@@ -164,7 +164,7 @@ export default function EncuestaForm({ user }) {
                         onChange={handleChange}
                         className="w-full accent-sky-600"
                       />
-                      <span className="px-3 py-1 bg-sky-100 text-sky-700 font-bold text-sm rounded-lg">Nivel {formData[key]}</span>
+                      <span className="px-3 py-1 bg-sky-100 text-sky-800 font-bold text-sm rounded-lg">Nivel {formData[key]}</span>
                     </div>
                   ) : config.tipo === "textarea" ? (
                     <textarea
@@ -173,7 +173,7 @@ export default function EncuestaForm({ user }) {
                       value={formData[key]}
                       onChange={handleChange}
                       placeholder={config.placeholder}
-                      className="w-full border border-slate-200 p-3 rounded-xl text-sm text-slate-800 bg-slate-50/50 outline-none focus:ring-2 focus:ring-sky-500 resize-none"
+                      className="w-full border border-slate-300 p-3 rounded-xl text-sm font-medium text-slate-900 bg-white outline-none focus:ring-2 focus:ring-sky-500 resize-none placeholder:text-slate-400"
                     ></textarea>
                   ) : null}
                 </div>
