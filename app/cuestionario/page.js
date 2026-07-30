@@ -12,21 +12,23 @@ export default function CuestionarioPage() {
   const [user, setUser] = useState(null);
   const [seccionActual, setSeccionActual] = useState(0);
   const [respuestas, setRespuestas] = useState({});
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [validacionError, setValidacionError] = useState(null);
   const timerInactividad = useRef(null);
 
-  // Verificar sesión y si ya respondió al cargar la página
+  // Verificación estricta al montar la página o al recargar
   useEffect(() => {
-    const verificarAcceso = async () => {
+    const verificarAccesoEstricto = async () => {
+      setCargando(true);
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
       if (sessionError || !session) {
         router.replace("/login");
         return;
       }
 
-      // Validar si ya respondió previamente
+      // Validar si ya respondió previamente para sacarlo al instante
       const { data: respuestaExistente } = await supabase
         .from("respuestas")
         .select("id")
@@ -39,14 +41,15 @@ export default function CuestionarioPage() {
       }
 
       setUser(session.user);
+      setCargando(false);
     };
 
-    verificarAcceso();
+    verificarAccesoEstricto();
   }, [router]);
 
   const STORAGE_KEY = user?.id ? `encuesta_draft_${user.id}` : null;
 
-  // Cargar borrador local
+  // Cargar borrador local solo si el usuario está autenticado y verificado
   useEffect(() => {
     if (STORAGE_KEY) {
       const borradorGuardado = localStorage.getItem(STORAGE_KEY);
@@ -68,8 +71,8 @@ export default function CuestionarioPage() {
     }
   };
 
-  // Cierre por inactividad
   const cerrarSesionPorInactividad = async () => {
+    if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
     await supabase.auth.signOut();
     router.replace("/login");
   };
@@ -93,7 +96,6 @@ export default function CuestionarioPage() {
   const seccion = SECCIONES[seccionActual];
   const esUltimaSeccion = seccionActual === SECCIONES.length - 1;
 
-  // Validar solo campos requeridos
   const validarSeccionActual = () => {
     for (const preg of seccion.preguntas) {
       if (preg.requerido) {
@@ -155,10 +157,10 @@ export default function CuestionarioPage() {
     router.replace("/gracias");
   };
 
-  if (!user) {
+  if (cargando || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm font-medium">
-        Cargando sesión...
+        Verificando sesión y seguridad...
       </div>
     );
   }
@@ -168,7 +170,6 @@ export default function CuestionarioPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-3xl mx-auto p-8 bg-white rounded-2xl shadow-lg border border-slate-100">
-        {/* Barra de Progreso */}
         <div className="mb-8">
           <div className="flex justify-between text-xs font-semibold text-slate-500 mb-2">
             <span>Sección {seccionActual + 1} de {SECCIONES.length}</span>
