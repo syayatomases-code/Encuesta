@@ -4,10 +4,11 @@ import OpenAI from "openai";
 export async function POST(req) {
   try {
     // Inicializamos el cliente aquí dentro para que corra solo en runtime (cuando se hace la petición)
+
     const openai = new OpenAI({
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: process.env.OPENROUTER_API_KEY,
-    });
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.NEXT_PUBLIC_OPENROUTER_API_KEY,
+});
 
     const body = await req.json();
     const { prompt, contexto } = body;
