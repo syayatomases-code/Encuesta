@@ -18,7 +18,7 @@ export default function LoginPage() {
     const usuarioLimpio = usuario.trim().toLowerCase();
     const emailFormateado = usuarioLimpio.includes("@")
       ? usuarioLimpio
-      : `${usuarioLimpio}@neurologia.local`;
+      : `${usuarioLimpio}@brainsafety.local`;
 
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: emailFormateado,
@@ -74,16 +74,16 @@ export default function LoginPage() {
           <div className="w-12 h-12 bg-sky-600 rounded-xl flex items-center justify-center text-white text-2xl mx-auto mb-3 font-bold">
             🧠
           </div>
-          <h1 className="text-xl font-bold text-slate-800">Acceso a Evaluación</h1>
+          <h1 className="text-xl font-bold text-slate-800">Diagnóstico de Neuroseguridad</h1>
           <p className="text-xs text-sky-600 font-semibold tracking-wide uppercase mt-1">
-            Centro de Neurología Especializada
+            Brain Safety · Salud y Seguridad en el Trabajo
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Usuario / Código de Paciente
+              Usuario / Código de Trabajador
             </label>
             <input
               type="text"
@@ -123,7 +123,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-8 text-center border-t border-slate-100 pt-4 text-xs text-slate-400">
-          Ingrese las credenciales suministradas por el especialista
+          Ingrese las credenciales suministradas por su coordinador de SST
         </div>
       </div>
     </div>

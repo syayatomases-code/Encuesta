@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { SECCIONES } from "@/lib/preguntas";
+import MicroTests from "@/components/MicroTests";
+import { calcularNivelAlerta } from "@/lib/scoring";
 
 const TIEMPO_INACTIVIDAD_MS = 10 * 60 * 1000; // 10 minutos
 
@@ -15,6 +17,8 @@ export default function CuestionarioPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [validacionError, setValidacionError] = useState(null);
+  const [fase, setFase] = useState("preguntas"); // "preguntas" | "microtests" | "resultado"
+  const [nivelAlerta, setNivelAlerta] = useState(null);
   const timerInactividad = useRef(null);
 
   // Verificación estricta al montar la página o al recargar
@@ -121,22 +125,30 @@ export default function CuestionarioPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSubmit = async (e) => {
+  const handleContinuarAMicroTests = (e) => {
     e.preventDefault();
     setValidacionError(null);
 
     if (!validarSeccionActual()) {
-      setValidacionError("Por favor completa las preguntas obligatorias antes de enviar.");
+      setValidacionError("Por favor completa las preguntas obligatorias antes de continuar.");
       return;
     }
 
+    setFase("microtests");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleMicroTestsComplete = async (resultadosMicroTests) => {
     setCargando(true);
     setError(null);
+
+    const datosCompletos = { ...respuestas, microtests: resultadosMicroTests };
+    const alerta = calcularNivelAlerta(respuestas, resultadosMicroTests);
 
     const { error: insertError } = await supabase.from("respuestas").insert([
       {
         user_id: user.id,
-        data: respuestas,
+        data: datosCompletos,
       },
     ]);
 
@@ -153,8 +165,9 @@ export default function CuestionarioPage() {
     if (STORAGE_KEY) {
       localStorage.removeItem(STORAGE_KEY);
     }
+    setNivelAlerta(alerta);
     setCargando(false);
-    router.replace("/gracias");
+    setFase("resultado");
   };
 
   if (cargando || !user) {
@@ -166,6 +179,48 @@ export default function CuestionarioPage() {
   }
 
   const porcentajeProgreso = Math.round(((seccionActual) / SECCIONES.length) * 100);
+
+  if (fase === "microtests") {
+    return (
+      <div className="min-h-screen bg-slate-50 py-10 px-4">
+        <div className="max-w-3xl mx-auto p-8 bg-white rounded-2xl shadow-lg border border-slate-100 flex flex-col">
+          <MicroTests onComplete={handleMicroTestsComplete} />
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-700 text-sm font-medium rounded-lg">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fase === "resultado" && nivelAlerta) {
+    const colores = {
+      verde: "bg-emerald-50 border-emerald-200 text-emerald-800",
+      amarillo: "bg-amber-50 border-amber-200 text-amber-800",
+      rojo: "bg-red-50 border-red-200 text-red-800",
+      gris: "bg-slate-50 border-slate-200 text-slate-800",
+    };
+    const emojis = { verde: "🟢", amarillo: "🟡", rojo: "🔴", gris: "⚪" };
+    return (
+      <div className="min-h-screen bg-slate-50 py-10 px-4 flex items-center justify-center">
+        <div className="max-w-md w-full p-8 bg-white rounded-2xl shadow-lg border border-slate-100 text-center">
+          <div className="text-5xl mb-3">{emojis[nivelAlerta.nivel]}</div>
+          <h2 className="text-xl font-bold text-slate-800 mb-1">{nivelAlerta.etiqueta}</h2>
+          <div className={`mt-4 p-4 rounded-lg border text-sm leading-relaxed ${colores[nivelAlerta.nivel]}`}>
+            {nivelAlerta.recomendacion}
+          </div>
+          <button
+            onClick={() => router.replace("/gracias")}
+            className="mt-6 px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm shadow-md"
+          >
+            Continuar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
@@ -188,7 +243,7 @@ export default function CuestionarioPage() {
           <p className="text-sm text-slate-500 mt-1">{seccion.descripcion}</p>
         </div>
 
-        <form onSubmit={esUltimaSeccion ? handleSubmit : handleSiguienteSeccion}>
+        <form onSubmit={esUltimaSeccion ? handleContinuarAMicroTests : handleSiguienteSeccion}>
           <div className="space-y-6">
             {seccion.preguntas.map((p) => (
               <div key={p.id} className="flex flex-col gap-2">
@@ -272,7 +327,7 @@ export default function CuestionarioPage() {
                 disabled={cargando}
                 className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm shadow-md disabled:opacity-50"
               >
-                {cargando ? "Guardando..." : "Finalizar y Enviar"}
+                {cargando ? "Cargando..." : "Continuar a Pruebas Cognitivas →"}
               </button>
             ) : (
               <button

@@ -18,7 +18,7 @@ export default function GraciasPage() {
         </div>
         <h1 className="text-xl font-bold text-slate-800">Evaluación Enviada</h1>
         <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-          Sus respuestas han sido registradas correctamente en el sistema. El especialista las revisará a la brevedad.
+          Sus respuestas han sido registradas correctamente en el sistema. Su coordinador de SST revisará los resultados.
         </p>
 
         <button

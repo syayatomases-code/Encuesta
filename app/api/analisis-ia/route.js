@@ -20,13 +20,13 @@ export async function POST(request) {
 
     const { prompt, contexto } = await request.json();
 
-    const systemInstruction = `Eres un médico especialista en neuropsicología y analista de datos clínicos. 
-    - Si el contexto es un solo paciente, analiza sus respuestas de forma individual, profesional y clínica.
-    - Si el contexto es una lista de múltiples pacientes, cruza los datos y responde de forma global a la solicitud del administrador.
+    const systemInstruction = `Eres un especialista en Neuroseguridad Laboral (modelo Brain Safety) y analista de datos de SST. 
+    - Si el contexto es un solo trabajador, analiza sus respuestas de forma individual y orientada a la prevención de riesgos, sin enfoque sancionatorio.
+    - Si el contexto es una lista de múltiples trabajadores, cruza los datos y responde de forma global a la solicitud del coordinador de SST.
     IMPORTANTE: NO utilices tablas de Markdown (evita barras verticales | o líneas con guiones ---) ni títulos con almohadillas (##). Utiliza únicamente texto plano, párrafos claros y viñetas sencillas con guiones (-) para que el reporte sea perfectamente legible.`;
 
     const fullPrompt = `
-      Contexto recibido (Paciente o Lista de Pacientes):
+      Contexto recibido (Trabajador o Lista de Trabajadores):
       ${JSON.stringify(contexto, null, 2)}
 
       Solicitud del administrador:

@@ -3,13 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { SECCIONES } from "@/lib/preguntas";
+import { calcularNivelAlerta } from "@/lib/scoring";
 
 export default function AdminPage() {
   const router = useRouter();
   const [respuestas, setRespuestas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [seleccionada, setSeleccionada] = useState(null);
-  const [vistaActiva, setVistaActiva] = useState("dashboard"); // "dashboard" o "pacientes"
+  const [vistaActiva, setVistaActiva] = useState("dashboard"); // "dashboard" o "trabajadores"
 
   // Estados para la IA Individual (en el modal)
   const [resumenIA, setResumenIA] = useState("");
@@ -139,7 +140,7 @@ export default function AdminPage() {
     
     setCargandoIA(true);
     const resumen = await consultarIA(
-      "Genera un resumen clínico estructurado y conciso de los puntos más relevantes de esta evaluación neurológica.", 
+      "Genera un resumen del nivel de alerta y los factores de riesgo más relevantes de este diagnóstico de neuroseguridad.", 
       item.data
     );
     setResumenIA(resumen);
@@ -177,12 +178,12 @@ export default function AdminPage() {
   };
 
   // --- CÁLCULOS DE MÉTRICAS PARA EL DASHBOARD EMPRESARIAL ---
-  const totalPacientes = respuestas.length;
+  const totalTrabajadores = respuestas.length;
   
   // Calcular edades promedio o grupos etarios si existe el campo edad o fecha de nacimiento
-  const pacientesConEdad = respuestas.filter(item => item.data?.edad);
-  const edadPromedio = pacientesConEdad.length > 0 
-    ? Math.round(pacientesConEdad.reduce((acc, curr) => acc + Number(curr.data.edad), 0) / pacientesConEdad.length) 
+  const trabajadoresConEdad = respuestas.filter(item => item.data?.edad);
+  const edadPromedio = trabajadoresConEdad.length > 0 
+    ? Math.round(trabajadoresConEdad.reduce((acc, curr) => acc + Number(curr.data.edad), 0) / trabajadoresConEdad.length) 
     : "N/A";
 
   // Evaluaciones de los últimos 7 días
@@ -209,7 +210,7 @@ export default function AdminPage() {
               <span className="bg-indigo-600 text-white font-black text-xs px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
                 Enterprise v2.4
               </span>
-              <h1 className="text-2xl font-bold text-slate-900">Centro de Inteligencia Clínica</h1>
+              <h1 className="text-2xl font-bold text-slate-900">Centro de Mando · Neuroseguridad</h1>
             </div>
             <p className="text-sm text-slate-500 mt-1">Plataforma centralizada de monitoreo y análisis neuronal</p>
           </div>
@@ -227,14 +228,14 @@ export default function AdminPage() {
                 📊 Dashboard BI
               </button>
               <button
-                onClick={() => setVistaActiva("pacientes")}
+                onClick={() => setVistaActiva("trabajadores")}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  vistaActiva === "pacientes"
+                  vistaActiva === "trabajadores"
                     ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                👥 Base de Pacientes
+                👥 Base de Trabajadores
               </button>
             </div>
 
@@ -259,7 +260,7 @@ export default function AdminPage() {
                   <span className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl text-sm font-bold">📋</span>
                 </div>
                 <div className="mt-4">
-                  <h2 className="text-3xl font-black text-slate-900">{totalPacientes}</h2>
+                  <h2 className="text-3xl font-black text-slate-900">{totalTrabajadores}</h2>
                   <p className="text-xs text-emerald-600 font-semibold mt-1">↑ Registros sincronizados en BD</p>
                 </div>
               </div>
@@ -298,7 +299,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* ASISTENTE GLOBAL DE PACIENTES (POTENCIADO PARA BI) */}
+            {/* ASISTENTE GLOBAL DE TRABAJADORES (POTENCIADO PARA BI) */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
@@ -356,7 +357,7 @@ export default function AdminPage() {
                       consultarGlobalIA();
                     }
                   }}
-                  placeholder="Ej: ¿Cuáles son los síntomas más recurrentes en todos los pacientes registrados?"
+                  placeholder="Ej: ¿Cuáles son los factores de riesgo más recurrentes en todos los trabajadores registrados?"
                   className="flex-1 text-sm px-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 font-medium placeholder:text-slate-400 shadow-sm"
                   disabled={cargandoGlobal}
                 />
@@ -375,7 +376,7 @@ export default function AdminPage() {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-slate-800 text-lg">Últimas Evaluaciones Ingresadas</h3>
                 <button
-                  onClick={() => setVistaActiva("pacientes")}
+                  onClick={() => setVistaActiva("trabajadores")}
                   className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
                 >
                   Ver registro completo →
@@ -386,7 +387,7 @@ export default function AdminPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-400 text-xs uppercase font-semibold">
-                      <th className="p-4">Paciente</th>
+                      <th className="p-4">Trabajador</th>
                       <th className="p-4">Identificación</th>
                       <th className="p-4">Fecha de Envío</th>
                       <th className="p-4 text-right">Acción</th>
@@ -416,16 +417,16 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* VISTA 2: BASE DE PACIENTES COMPLETA */}
-        {vistaActiva === "pacientes" && (
+        {/* VISTA 2: BASE DE TRABAJADORES COMPLETA */}
+        {vistaActiva === "trabajadores" && (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden animate-fadeIn">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-bold text-slate-800 text-lg">Directorio Completo de Pacientes ({respuestas.length})</h3>
+              <h3 className="font-bold text-slate-800 text-lg">Directorio Completo de Trabajadores ({respuestas.length})</h3>
             </div>
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-400 text-xs uppercase font-semibold">
-                  <th className="p-4">Paciente</th>
+                  <th className="p-4">Trabajador</th>
                   <th className="p-4">Identificación</th>
                   <th className="p-4">Fecha de Envío</th>
                   <th className="p-4 text-right">Acciones</th>
@@ -475,7 +476,7 @@ export default function AdminPage() {
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
               <div>
                 <h3 className="font-bold text-slate-800 text-xl">
-                  Evaluación de: {seleccionada.data?.nombre || "Paciente"}
+                  Evaluación de: {seleccionada.data?.nombre || "Trabajador"}
                 </h3>
                 <p className="text-sm text-slate-500 mt-0.5 font-medium">
                   Identificación: {seleccionada.data?.documento || "N/A"}
@@ -490,7 +491,56 @@ export default function AdminPage() {
             </div>
 
             <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/40">
-              
+
+              {/* 0. SEMÁFORO Y MICRO-TASKS COGNITIVAS */}
+              {(() => {
+                const mt = seleccionada.data?.microtests;
+                const alerta = calcularNivelAlerta(seleccionada.data, mt);
+                const coloresBadge = {
+                  verde: "bg-emerald-100 text-emerald-800 border-emerald-300",
+                  amarillo: "bg-amber-100 text-amber-800 border-amber-300",
+                  rojo: "bg-red-100 text-red-800 border-red-300",
+                  gris: "bg-slate-100 text-slate-600 border-slate-300",
+                };
+                const emojis = { verde: "🟢", amarillo: "🟡", rojo: "🔴", gris: "⚪" };
+                return (
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-bold text-slate-600 uppercase tracking-wider">
+                        Nivel de Alerta Operacional
+                      </h4>
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${coloresBadge[alerta.nivel]}`}>
+                        {emojis[alerta.nivel]} {alerta.etiqueta}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">{alerta.recomendacion}</p>
+                    {mt ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <p className="font-bold text-slate-500 uppercase mb-1">Tiempo de Reacción</p>
+                          <p className="text-slate-800">Promedio: {mt.tiempoReaccion?.promedioMs ?? "-"} ms</p>
+                          <p className="text-slate-800">Salidas en falso: {mt.tiempoReaccion?.salidasFalsas ?? "-"}</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <p className="font-bold text-slate-500 uppercase mb-1">Atención Sostenida</p>
+                          <p className="text-slate-800">Aciertos: {mt.atencionSostenida?.aciertos ?? "-"} / {mt.atencionSostenida?.totalEstimulos ?? "-"}</p>
+                          <p className="text-slate-800">Omisiones: {mt.atencionSostenida?.omisiones ?? "-"}</p>
+                          <p className="text-slate-800">Falsas alarmas: {mt.atencionSostenida?.falsasAlarmas ?? "-"}</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <p className="font-bold text-slate-500 uppercase mb-1">Control de Impulsividad</p>
+                          <p className="text-slate-800">Errores No-Go: {mt.controlImpulsividad?.erroresNoGo ?? "-"}</p>
+                          <p className="text-slate-800">Omisiones Go: {mt.controlImpulsividad?.omisionesGo ?? "-"}</p>
+                          <p className="text-slate-800">RT Go promedio: {mt.controlImpulsividad?.promedioRtGoMs ?? "-"} ms</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">Este registro no tiene resultados de micro-tasks (respuesta anterior a la actualización).</p>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* 1. SECCIONES TRADICIONALES PRIMERO */}
               {SECCIONES.map((sec) => (
                 <div key={sec.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -499,15 +549,15 @@ export default function AdminPage() {
                   </h4>
                   <div className="space-y-4">
                     {sec.preguntas.map((preg) => {
-                      const respuestaPaciente = seleccionada.data?.[preg.id];
+                      const respuestaTrabajador = seleccionada.data?.[preg.id];
                       return (
                         <div key={preg.id} className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                           <span className="text-slate-500 font-medium">
                             {preg.label}:
                           </span>
                           <span className="font-semibold text-slate-900 bg-slate-50/80 p-3 rounded-xl border border-slate-100 shadow-sm">
-                            {respuestaPaciente !== undefined && respuestaPaciente !== "" 
-                              ? respuestaPaciente 
+                            {respuestaTrabajador !== undefined && respuestaTrabajador !== "" 
+                              ? respuestaTrabajador 
                               : "No respondido / Opcional"}
                           </span>
                         </div>
@@ -524,13 +574,13 @@ export default function AdminPage() {
                     Asistente IA
                   </span>
                   <h4 className="text-sm font-bold text-indigo-950 uppercase tracking-wider">
-                    Resumen Clínico Inteligente
+                    Nivel de Alerta y Recomendación Preventiva
                   </h4>
                 </div>
 
                 {cargandoIA && !resumenIA ? (
                   <div className="text-sm text-indigo-600 font-medium animate-pulse py-3">
-                    Analizando respuestas del paciente...
+                    Analizando respuestas del trabajador...
                   </div>
                 ) : (
                   <div className="text-base text-slate-800 bg-white p-5 rounded-2xl border border-indigo-100 leading-relaxed mb-6 shadow-sm">
@@ -538,10 +588,10 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Chat Estilo Messenger para el paciente seleccionado */}
+                {/* Chat Estilo Messenger para el trabajador seleccionado */}
                 <div className="pt-5 border-t border-indigo-200/60">
                   <p className="text-xs font-bold text-indigo-950 uppercase tracking-wide mb-3">
-                    Chat Clínico con la IA sobre este paciente:
+                    Chat con la IA sobre este trabajador:
                   </p>
                   
                   {chatHistorial.length > 0 && (
@@ -590,7 +640,7 @@ export default function AdminPage() {
                           enviarPreguntaChat();
                         }
                       }}
-                      placeholder="Escribe una pregunta sobre el paciente (ej: ¿Qué tratamiento sugieres?)..."
+                      placeholder="Escribe una pregunta sobre el trabajador (ej: ¿Qué recomendación preventiva sugieres?)..."
                       className="flex-1 text-sm px-4 py-3.5 rounded-2xl border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 font-medium placeholder:text-slate-400 shadow-sm"
                       disabled={cargandoIA}
                     />
